@@ -5,6 +5,7 @@ const ProductType = require('../model/productType');
 
 const router = express.Router();
 router.use(express.json());
+
 router.post('/product', auth, async (req, res) => {
     try {
         const productTypeId = req.body.productTypeId;
@@ -12,7 +13,7 @@ router.post('/product', auth, async (req, res) => {
         if (!type) throw new Error("Product Type not match..")
         const productData = new Product({ productUserId: req.user._id, ...req.body });
         const product = await productData.save();
-        !product && res.status(404).send({ error: "Product  not inserted .." })
+        if (!product) throw new Error("Product not insert ..")
         res.status(201).send({ message: "product inserted ...", data: product })
     } catch (e) {
         res.status(400).send({ error: e.message.toString() })
@@ -48,7 +49,7 @@ router.patch('/product/:_id', auth, async (req, res) => {
     if (!validAction) return res.status(400).send({ error: "not access.... " });
     try {
         const product = await Product.findByIdAndUpdate({ _id: req.params._id }, req.body, { new: true, runValidators: true });
-        !product && res.status(404).send({ error: "Product not found .." })
+        if (!product) throw new Error("Product not found ..")
         res.status(200).send({ message: "product updated ...", data: product })
     } catch (e) {
         res.status(400).send({ error: e.message.toString() })
@@ -57,7 +58,7 @@ router.patch('/product/:_id', auth, async (req, res) => {
 router.delete('/product/:_id', auth, async (req, res) => {
     try {
         const product = await Product.findByIdAndDelete({ _id: req.params._id });
-        !product && res.status(404).send({ error: "Product  not found  .." })
+        if (!product) throw new Error("Product not found ..")
         res.status(200).send({ message: "product deleted ...", data: product })
     } catch (e) {
         res.status(400).send({ error: e.message.toString() })
@@ -67,7 +68,7 @@ router.delete('/product/:_id', auth, async (req, res) => {
 router.post('/product/like/:_id', auth, async (req, res) => {
     try {
         const productData = await Product.findById({ _id: req.params._id });
-        !productData && res.status(404).send({ error: "Product  not found  .." })
+        if (!productData) throw new Error("Product not found ..")
         const data = productData.productLikes.findIndex(item => item.likeUserId == (req.user._id).toString())
         if (data === -1) {
             productData.productLikes = productData.productLikes.concat({ likeUserId: req.user._id, isLikes: true })
@@ -76,7 +77,7 @@ router.post('/product/like/:_id', auth, async (req, res) => {
             productData.productLikes[data].isLikes = !islike
         }
         const like = await productData.save();
-        res.status(200).send({ message: `successful ${like.productLikes[0].isLikes ? " like " : "dislike "}`, data: like })
+        res.status(200).send({ message: `successful ${like.productLikes[0].isLikes ? " like " : "dislike "}` })
     } catch (e) {
         res.status(400).send({ error: e.message.toString() })
     }
@@ -84,7 +85,7 @@ router.post('/product/like/:_id', auth, async (req, res) => {
 router.post('/product/comment/:_id', auth, async (req, res) => {
     try {
         const productData = await Product.findById({ _id: req.params._id });
-        !productData && res.status(404).send({ error: "Product  not found  .." })
+        if (!productData) throw new Error("Product not found ..")
         productData.productComments = productData.productComments.concat({ commnetUserId: req.user._id, comments: req.body.comments })
         const comment = await productData.save();
         res.status(200).send({ message: "successful product comment  ...", data: comment })
@@ -95,6 +96,7 @@ router.post('/product/comment/:_id', auth, async (req, res) => {
 router.get('/product/mostlikes', auth, async (req, res) => {
     try {
         const product = await Product.find();
+        if (!product) throw new Error("Product not found ..")
         const mostlike = product.map((pro) => {
             return ({ pro, totalLikes: pro.productLikes.filter(item => item.isLikes === true).length })
         })
